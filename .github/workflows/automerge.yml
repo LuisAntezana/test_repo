@@ -1,0 +1,22 @@
+name: Automerge to develop
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  merge:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        ref: develop
+    - name: Merge from main to develop
+      run: |
+        git merge origin/main
+        git push
