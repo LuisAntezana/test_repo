@@ -1,0 +1,16 @@
+name: Build image & Push
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Build
+      uses: cloudposse/github-action-docker-compose-test-run@main
+      with:
+        file: docker-compose.yaml
