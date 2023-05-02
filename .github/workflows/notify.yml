@@ -17,7 +17,7 @@ jobs:
     
     - run: |
         version=$(gh release view --json name --jq .name)
-        echo "# :mega: The version $version has been released :mega:" >> releasenotes.md
+        #echo "# :mega: The version $version has been released :mega:" >> releasenotes.md
         gh release view --json body --jq .body >> releasenotes.md
         cat releasenotes.md
       env:
