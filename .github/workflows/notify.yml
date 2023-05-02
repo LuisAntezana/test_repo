@@ -1,0 +1,31 @@
+name: Notify Slack on Release
+
+on:
+  release:
+    types:
+    - created
+
+jobs:
+  notify_slack:
+    runs-on: ubuntu-latest
+    name: Build release notes message
+    steps:
+    - run: |
+        version=$(gh release view --json name --jq .name)
+        echo "# :mega: The version $version has been released :mega:" >> releasenotes.md
+        gh release view --json body --jq .body >> releasenotes.md
+        cat releasenotes.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - run: |
+        npm install slackify-markdown
+        echo "const fs=require("fs"),slackifyMarkdown=require("slackify-markdown"),fileName=process.argv[2],markdown=fs.readFileSync(fileName,"utf-8");var result=slackifyMarkdown(markdown);console.log(result);" > converter.js
+        #echo "{\"text\":\"$(node converter.js releasenotes.md)\"}" | iconv > payload-slack-content.json # probar esto :s
+        slack_message=$(node converter.js releasenotes.md)
+
+    - uses: slackapi/slack-github-action@v1.23.0
+      with:
+        slack-message: "${{ slack_message }}"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
