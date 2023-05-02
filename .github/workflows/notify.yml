@@ -26,7 +26,7 @@ jobs:
     - run: |
         npm install slackify-markdown
         echo "const fs=require('fs'),slackifyMarkdown=require('slackify-markdown'),fileName=process.argv[2],markdown=fs.readFileSync(fileName,'utf-8');var result=slackifyMarkdown(markdown);console.log(result);" > converter.js
-        echo "{\"text\":\"$(node converter.js releasenotes.md | tr '\n' '\\n')\"}" | iconv > payload-slack-content.json
+        echo "{\"text\":\"$(node converter.js releasenotes.md | awk '{printf "%s\\n", $0}')\"}" | iconv > payload-slack-content.json
         cat payload-slack-content.json
         #slack_message=$(node converter.js releasenotes.md)
 
