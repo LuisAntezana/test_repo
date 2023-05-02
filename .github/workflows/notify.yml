@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Build release notes message
     steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
     - run: |
         version=$(gh release view --json name --jq .name)
         echo "# :mega: The version $version has been released :mega:" >> releasenotes.md
