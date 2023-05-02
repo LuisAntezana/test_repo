@@ -15,7 +15,8 @@ jobs:
       with:
         fetch-depth: 0
     
-    - run: |
+    - name: Get release notes
+      run: |
         version=$(gh release view --json name --jq .name)
         echo "# :mega: The version $version has been released :mega:" >> releasenotes.md
         gh release view --json body --jq .body >> releasenotes.md
@@ -23,14 +24,16 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - run: |
+    - name: Convert release notes to slack format
+      run: |
         npm install slackify-markdown
         echo "const fs=require('fs'),slackifyMarkdown=require('slackify-markdown'),fileName=process.argv[2],markdown=fs.readFileSync(fileName,'utf-8');var result=slackifyMarkdown(markdown);console.log(result);" > converter.js
         echo "{\"text\":\"$(node converter.js releasenotes.md | awk '{printf "%s\\n", $0}')\"}" | iconv > payload-slack-content.json
         cat payload-slack-content.json
         #slack_message=$(node converter.js releasenotes.md)
 
-    - uses: slackapi/slack-github-action@v1.23.0
+    - name: Send slack notification
+      uses: slackapi/slack-github-action@v1.23.0
       with:
         payload-file-path: "./payload-slack-content.json"
       env:
