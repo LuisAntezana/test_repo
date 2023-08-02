@@ -40,7 +40,7 @@ jobs:
               echo "| **$file** | \`$error\` |" >> errors.txt
             fi
           done
-          if [ -f errors.txt ] then
+          if [ -f errors.txt ]; then
             echo "Some validation errors found! Uploading review to the PR..."
             gh pr review $PR_NUMBER --request-changes --body-file errors.txt
           else
