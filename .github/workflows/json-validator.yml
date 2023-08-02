@@ -32,7 +32,7 @@ jobs:
           readarray -t files <<< $(gh pr diff $PR_NUMBER --name-only | grep -oiP '^(?!.github\/workflows\/.+\b).+\.json$')
           for file in "${files[@]}"; do
             echo "$file"
-            node .github/workflows/json-validator.js --schema=.github/workflows/schema.js --json=$file
+            node .github/workflows/json-validator.js --schema=.github/workflows/schema.json --json=$file
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
