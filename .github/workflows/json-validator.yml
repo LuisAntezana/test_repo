@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate_jsons:
+  validate_jsons_job:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -36,11 +36,17 @@ jobs:
             result=$(node .github/workflows/json-validator.js --schema=.github/workflows/schema.json --json=$file) || error=$result
             if [ ! -z "$error" ]; then
               echo "Error found in file '$file': $error"
-              [ ! -f errors.txt ] && echo $'| File | Error validation message |\n|--------|--------|' >> errors.txt
+              [ ! -f errors.txt ] && echo $'| File | Validation error message |\n|--------|--------|' >> errors.txt
               echo "| **$file** | \`$error\` |" >> errors.txt
             fi
           done
-          [ -f errors.txt ] && echo "Uploading the review to the pull request..." && gh pr review $PR_NUMBER --request-changes --body-file errors.txt
+          if [ -f errors.txt ] then
+            echo "Some validation errors found! Uploading review to the PR..."
+            gh pr review $PR_NUMBER --request-changes --body-file errors.txt
+          else
+            echo "All jsons are valid! Approving PR..."
+            gh pr review $PR_NUMBER --approve
+          fi
           echo "All done!"
           
         env:
