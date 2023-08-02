@@ -1,4 +1,4 @@
-name: Show Changed Files
+name: Validate JSONs
 on:
   pull_request:
     types:
@@ -18,22 +18,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Show file contents
+      - name: Validate JSONs step
         run: |
           # Get the branch name from the event payload
           branch_name=$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")
 
           git fetch origin "$branch_name"
           git checkout "$branch_name"
-          echo "Listing the files:"
-          gh pr diff $PR_NUMBER --name-only
-
           npm install -y ajv minimist
-          readarray -t files <<< $(gh pr diff $PR_NUMBER --name-only | grep -oiP '^(?!.github\/workflows\/.+\b).+\.json$')
+          echo "Listing the files:"
+          json_files=$(gh pr diff $PR_NUMBER --name-only | grep -oiP '^(?!.github\/workflows\/.+\b).+\.json$')
+          echo $json_files
+          readarray -t files <<< $json_files
           for file in "${files[@]}"; do
-            echo "$file"
-            node .github/workflows/json-validator.js --schema=.github/workflows/schema.json --json=$file
+            error=""
+            result=$(node .github/workflows/json-validator.js --schema=.github/workflows/schema.json --json=$file) || error=$result
+            if [ ! -z "$error" ]; then
+              [ ! -f errors.txt ] && echo "| File | Error validation message |\n|--------|--------|" >> errors.txt
+              echo "| **$file** | `$error` |" >> errors.txt
+            fi
           done
+          [ -f errors.txt ] &&  gh pr review $PR_NUMBER --request-changes --body-file errors.txt
+          
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.number }}
