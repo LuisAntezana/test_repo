@@ -1,0 +1,38 @@
+name: Show Changed Files
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - edited
+      - reopened
+    branches:
+      - main
+  
+  workflow_dispatch:
+
+jobs:
+  show_contents:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Show file contents
+        run: |
+          # Get the branch name from the event payload
+          branch_name=$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")
+
+          git fetch origin "$branch_name"
+          git checkout "$branch_name"
+          echo "Listing the files:"
+          gh pr diff $PR_NUMBER --name-only
+          readarray -t files <<< $(gh pr diff $PR_NUMBER --name-only | grep ".json$")
+          for $file in "${files[@]}"; do
+            echo "$file"
+            node .github/workflows/json-validator.js --schema=schema.js --json=$file
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ github.event.issue.html_url }}
+          PR_NUMBER: ${{ github.event.number }}
