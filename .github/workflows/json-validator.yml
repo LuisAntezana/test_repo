@@ -31,14 +31,17 @@ jobs:
           echo $json_files
           readarray -t files <<< $json_files
           for file in "${files[@]}"; do
+            echo "Validating file '$file'..."
             error=""
             result=$(node .github/workflows/json-validator.js --schema=.github/workflows/schema.json --json=$file) || error=$result
             if [ ! -z "$error" ]; then
+              echo "Error found in file '$file': $error"
               [ ! -f errors.txt ] && echo "| File | Error validation message |\n|--------|--------|" >> errors.txt
               echo "| **$file** | `$error` |" >> errors.txt
             fi
           done
-          [ -f errors.txt ] &&  gh pr review $PR_NUMBER --request-changes --body-file errors.txt
+          [ -f errors.txt ] && echo "Uploading the review to the pull request..." && gh pr review $PR_NUMBER --request-changes --body-file errors.txt
+          echo "All done!"
           
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
