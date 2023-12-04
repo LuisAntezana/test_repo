@@ -1,4 +1,4 @@
-name: Show Changed Files
+name: Validate JSONs
 on:
   pull_request:
     types:
@@ -12,26 +12,43 @@ on:
   workflow_dispatch:
 
 jobs:
-  show_contents:
+  validate_jsons_job:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Show file contents
+      - name: Validate JSONs step
         run: |
           # Get the branch name from the event payload
           branch_name=$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")
 
           git fetch origin "$branch_name"
           git checkout "$branch_name"
+          npm install -y ajv minimist
           echo "Listing the files:"
-          gh pr diff $PR_NUMBER --name-only
-          readarray -t files <<< $(gh pr diff $PR_NUMBER --name-only | grep -oiP '^(?!.github\/workflows\/.+\b).+\.json$')
-          for $file in "${files[@]}"; do
-            echo "$file"
-            node .github/workflows/json-validator.js --schema=.github/workflows/schema.js --json=$file
+          json_files=$(gh pr diff $PR_NUMBER --name-only | grep -oiP '^(?!.github\/workflows\/.+\b).+\.json$')
+          echo $json_files
+          readarray -t files <<< $json_files
+          for file in "${files[@]}"; do
+            echo "Validating file '$file'..."
+            error=""
+            result=$(node .github/workflows/json-validator.js --schema=.github/workflows/schema.json --json=$file) || error=$result
+            if [ ! -z "$error" ]; then
+              echo "Error found in file '$file': $error"
+              [ ! -f errors.txt ] && echo $'| File | Validation error message |\n|--------|--------|' >> errors.txt
+              echo "| **$file** | \`$error\` |" >> errors.txt
+            fi
           done
+          if [ -f errors.txt ]; then
+            echo "Some validation errors found! Uploading review to the PR..."
+            gh pr review $PR_NUMBER --request-changes --body-file errors.txt
+          else
+            echo "All jsons are valid! Approving PR..."
+            gh pr review $PR_NUMBER --approve
+          fi
+          echo "All done!"
+          
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.number }}
